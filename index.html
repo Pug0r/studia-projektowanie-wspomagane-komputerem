@@ -1,21 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gramatyka rysunkowa w stylu Mondriana</title>
+    <title>Gramatyka kształtu w stylu Mondriana</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="left-panel">
-        <h2>Gramatyka rysunkowa w stylu Mondriana</h2>
-        <button id="applyButton">Apply</button>
-        <button>two</button>
-        <button>three</button>
+    <div id="main-container">
+        <div id="gui-panel">
+            <h2>Gramatyka kształtu w stylu Mondriana</h2>
+            <div id="rules-container">
+                <h3>Dostępne reguły:</h3>
+                <div id="rules-list">
+                    <p>Kliknij na dowolny biały prostokąt na płótnie, aby zobaczyć reguły, które można do niego zastosować.</p>
+                </div>
+            </div>
+            <button id="reset-button">Resetuj całość</button>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="mainCanvas"></canvas>
+        </div>
     </div>
-    <div class="main-content">
-        <canvas id="main-canvas" width="600" height="400"></canvas>
-    </div>
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
