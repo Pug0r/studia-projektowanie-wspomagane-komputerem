@@ -87,7 +87,7 @@ class ShapeGrammar {
 
         const rectToReplace = this.rectangles[rectIndex];
         const newRects = ruleToApply.apply(rectToReplace);
-        this.rectangles.splice(rectIndex, 1, ...newRects); // remove z podmianka, unpack na koncu koniec
+        this.rectangles.splice(rectIndex, 1, ...newRects); // remove z podmianka, unpack na koncu koniec. Tu zasadniczo dzieje sie transformacja
     }
 
     getClickedRect(clickX, clickY) {
@@ -166,11 +166,19 @@ function updateRulesPanel(rectId) {
             };
             rulesListDiv.appendChild(button);
         });
-    } else if (selectedRect) {
-        rulesListDiv.innerHTML = '<p>Do tego prostokąta nie można już zastosować żandych reguł.</p>';
-    } else {
-        rulesListDiv.innerHTML = '<p>Kliknij na dowolny biały prostokąt na płótnie, aby zobaczyć reguły, które można do niego zastosować.</p>';
+        return;
     }
+    // niekatywne przyciski, zapobiegaja "skakaniu" GUI przy wyborze prosotkatow.
+    userInstruction = selectedRectId 
+                ? '<p>Do tego prostokąta nie można już zastosować żandych reguł.</p>' 
+                : '<p>Kliknij na dowolny biały prostokąt na płótnie, aby zobaczyć reguły, które można do niego zastosować.</p>';
+    rulesListDiv.innerHTML = userInstruction;
+    shapeGrammar.rules.forEach(rule => {
+            const button = document.createElement('button');
+            button.innerText = rule.name;
+            button.disabled = true;
+            rulesListDiv.appendChild(button);
+        });
 }
 
 // Klikniecia uzytkownika po canvasie
