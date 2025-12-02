@@ -122,6 +122,14 @@ const shapeGrammar = new ShapeGrammar([
         new Rectangle(rect.x, rect.y, rect.width * 0.5, rect.height, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE),
         new Rectangle(rect.x + rect.width * 0.5, rect.y, rect.width * 0.5, rect.height, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE)
     ]),
+    new Transformation('Podziel pionowo (30/70)', (rect) => [
+        new Rectangle(rect.x, rect.y, rect.width * 0.3, rect.height, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE),
+        new Rectangle(rect.x + rect.width * 0.3, rect.y, rect.width * 0.7, rect.height, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE)
+    ]),
+    new Transformation('Podziel poziomo (50/50)', (rect) => [
+        new Rectangle(rect.x, rect.y, rect.width, rect.height * 0.5, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE),
+        new Rectangle(rect.x, rect.y + rect.height * 0.5, rect.width, rect.height * 0.5, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE)
+    ]),
     new Transformation('Podziel poziomo (30/70)', (rect) => [
         new Rectangle(rect.x, rect.y, rect.width, rect.height * 0.3, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE),
         new Rectangle(rect.x, rect.y + rect.height * 0.3, rect.width, rect.height * 0.7, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE)
