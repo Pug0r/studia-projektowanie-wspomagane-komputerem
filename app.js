@@ -19,7 +19,9 @@ const IN_CANVAS_PADDING = 10;
 // Globals powiazane z logika
 let nextRectangleId = 0;
 let nextRuleId = 0;
+let selectedRectId = null; // ID aktualnie klikniętego prostokąta
 
+// Logika gramatyki kształtów 
 class Rectangle {
     constructor(x, y, width, height, markerState, color) {
         this.id = nextRectangleId++;
@@ -97,10 +99,25 @@ class ShapeGrammar {
         }
         return null;
     }
+
+    getRectangle(rectangleId){ 
+        for (let i = 0; i < this.rectangles.length; i++) {
+            if (this.rectangles[i].id == rectangleId)
+                return this.rectangles[i];
+        }
+        return null;
+    }
+
+    draw(canvas){
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        this.rectangles.forEach(rect => {
+        rect.draw(ctx, rect.id === selectedRectId);
+        });
+    }
 }
 
-// TODO: mozna by to wydzielic w jakies klaski 
-const rules = [
+const shapeGrammar = new ShapeGrammar([
     new Transformation('Podziel pionowo (50/50)', (rect) => [
         new Rectangle(rect.x, rect.y, rect.width * 0.5, rect.height, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE),
         new Rectangle(rect.x + rect.width * 0.5, rect.y, rect.width * 0.5, rect.height, MARKER_STATE.ACTIVE, MONDRIAN_COLORS.WHITE)
@@ -116,30 +133,19 @@ const rules = [
     new Transformation('Wypełnij (Żółty)', (rect) => [
         new Rectangle(rect.x, rect.y, rect.width, rect.height, MARKER_STATE.INACTIVE, MONDRIAN_COLORS.YELLOW)]),
     new Transformation('Wypełnij (Biały)', (rect) => [
-        new Rectangle(rect.x, rect.y, rect.width, rect.height, MARKER_STATE.INACTIVE, MONDRIAN_COLORS.WHITE)])];
+        new Rectangle(rect.x, rect.y, rect.width, rect.height, MARKER_STATE.INACTIVE, MONDRIAN_COLORS.WHITE)])]);
 
-const shapeGrammar = new ShapeGrammar(rules);
-
+// Logika GUI
 const canvas = document.getElementById('mainCanvas');
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
-const ctx = canvas.getContext('2d');
 const rulesListDiv = document.getElementById('rules-list');
 const resetButton = document.getElementById('reset-button');
 
-let selectedRectId = null; // ID aktualnie klikniętego prostokąta
-
-// Narysuj aktualny stan
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    shapeGrammar.rectangles.forEach(rect => {
-        rect.draw(ctx, rect.id === selectedRectId);
-    });
-}
-
 // Odpowiada za stan panelu po lewej, daje wejscie do triggerowania regul
-function updateRulesPanel(selectedRect) {
+function updateRulesPanel(rectId) {
     rulesListDiv.innerHTML = ''; // wyczysc stan
+    selectedRect = shapeGrammar.getRectangle(rectId)
     if (selectedRect && selectedRect.markerState === MARKER_STATE.ACTIVE) {
         shapeGrammar.rules.forEach(rule => {
             const button = document.createElement('button');
@@ -148,7 +154,7 @@ function updateRulesPanel(selectedRect) {
                 shapeGrammar.applyRule(selectedRect.id, rule.id);
                 selectedRectId = null;
                 updateRulesPanel(null);
-                draw();
+                shapeGrammar.draw(canvas);
             };
             rulesListDiv.appendChild(button);
         });
@@ -166,17 +172,17 @@ function handleCanvasClick(event) {
     const y = event.clientY - rect.top;
     const clickedRect = shapeGrammar.getClickedRect(x, y);
     selectedRectId = clickedRect ? clickedRect.id : null;
-    updateRulesPanel(clickedRect);
-    draw();
+    updateRulesPanel(selectedRectId);
+    shapeGrammar.draw(canvas);
 }
 canvas.addEventListener('click', handleCanvasClick);
 
 // Ustaw poczatkowy stan GUI i logiki
 function initialize() {
     shapeGrammar.initialize();
-    selectedRectId = null;
-    updateRulesPanel(null);
-    draw();
+    selectedRectId = 0;
+    updateRulesPanel(selectedRectId);
+    shapeGrammar.draw(canvas);
 }
 resetButton.addEventListener('click', initialize);
 initialize();
