@@ -7,7 +7,8 @@ export const TYPES = {
     FLOWER_GARDEN: 'FLOWER_GARDEN',
     FOREST: 'FOREST',
     POND: 'POND', 
-    PATH: 'PATH', 
+    PATH: 'PATH',
+    TREASURE: 'TREASURE'
 };
 
 export const COLORS = {

@@ -10,12 +10,24 @@ class GraphNode {
     }
 }
 
+// konfigurowalne rozmiary
+var TREASURE_CHANCE = 0.1;
+var MIN_TREASURE_SIZE = 100;
+var TREASURE_MARGIN = 10;
+
+var MIN_NONTERMINAL_SIZE = 60;
+var MIN_ZONE_SIZE = 250;
+
+var PATH_WIDTH = 50;
+
+var MIN_POND_NODE_SIZE = 150;
+var POND_MARGIN = 20;
+
 class Transformation {
     static applyRule(node, grammar) {
-        if (node.w < 60 || node.h < 60) { // safeguard, nie chcemy za malych nodeow
+        if (node.w < MIN_NONTERMINAL_SIZE || node.h < MIN_NONTERMINAL_SIZE) { 
             if (!grammar.isTerminal(node.type)) {
-                const finalType = Math.random() < 0.2 ? TYPES.BENCH_AREA : TYPES.GRASS;
-                grammar.convertToTerminal(node, finalType);
+                grammar.convertToTerminal(node, TYPES.GRASS);
                 return true;
             }
             return false;
@@ -26,12 +38,12 @@ class Transformation {
         switch (node.type) {
             case TYPES.ROOT:
                 rand > 0.5 
-                ? this.splitVerticalWithPath(node, grammar, 50) 
-                : this.splitHorizontalWithPath(node, grammar, 50);
+                ? this.splitVerticalWithPath(node, grammar, PATH_WIDTH) 
+                : this.splitHorizontalWithPath(node, grammar, PATH_WIDTH);
                 return true;
 
             case TYPES.ZONE:
-                if (node.w > 250 || node.h > 250) {
+                if (node.w > MIN_ZONE_SIZE || node.h > MIN_ZONE_SIZE) {
                     node.w > node.h 
                     ? this.split(node, grammar, true, TYPES.ZONE, TYPES.ZONE) 
                     : this.split(node, grammar, false, TYPES.ZONE, TYPES.ZONE);
@@ -40,20 +52,21 @@ class Transformation {
                 }
                 return true;
 
+            // TERMINALNE
             case TYPES.PARCEL:
-                if (rand < 0.2 && node.w > 150 && node.h > 150) {
-                    this.embed(node, grammar, TYPES.POND, 20);
+                if (rand < 0.2 && node.w > MIN_POND_NODE_SIZE && node.h > MIN_POND_NODE_SIZE) { // small ponds look bad
+                    grammar.embedNode(node, TYPES.POND, POND_MARGIN);
                 } 
                 else if (rand < 0.45) {
                     grammar.addChild(node, TYPES.FOREST);
                 } 
                 else if (rand < 0.65) {
-                    node.w > 120 && node.h > 120 ? 
-                        (this.embed(node, grammar, TYPES.FOUNTAIN, node.w/2 - 30), node.type = TYPES.FLOWER_GARDEN) : 
-                        grammar.addChild(node, TYPES.FLOWER_GARDEN);
+                    grammar.addChild(node, TYPES.FLOWER_GARDEN);
                 } 
                 else {
                     grammar.addChild(node, TYPES.GRASS);
+                    if (node.w > MIN_TREASURE_SIZE && node.h > MIN_TREASURE_SIZE && Math.random() < TREASURE_CHANCE) 
+                        grammar.embedNode(node, TYPES.TREASURE, TREASURE_MARGIN);
                 }
                 return true;
         }
@@ -94,14 +107,6 @@ class Transformation {
             g.createNode(TYPES.ZONE, p.x, p.y + h1 + gap, p.w, p.h - h1 - gap)
         );
     }
-
-    // "uszczegolawia" pole tj. np. trawa -> trawa - staw
-    static embed(p, g, type, margin) {
-        p.children.push(g.createNode(TYPES.GRASS, p.x, p.y, p.w, p.h));
-        const feat = g.createNode(type, p.x + margin, p.y + margin, p.w - margin*2, p.h - margin*2);
-        feat.processed = true;
-        p.children.push(feat);
-    }
 }
 
 class GardenGrammar {
@@ -129,6 +134,19 @@ class GardenGrammar {
         return n;
     }
 
+    embedNode(parent, type, margin) {
+        this.addChild(parent, TYPES.GRASS);
+        const node = this.createNode(
+            type, 
+            parent.x + margin, 
+            parent.y + margin, 
+            parent.w - margin*2, 
+            parent.h - margin*2
+        );
+        node.processed = true; 
+        parent.children.push(node);
+    }
+
     addChild(parent, type) {
         parent.children.push(this.createNode(type, parent.x, parent.y, parent.w, parent.h));
     }
@@ -142,13 +160,15 @@ class GardenGrammar {
     }
 
     isTerminal(type) {
-        return [TYPES.GRASS, TYPES.FOREST, TYPES.POND, TYPES.PATH, TYPES.FLOWER_GARDEN, TYPES.PLAZA, TYPES.BENCH_AREA].includes(type);
+        return [TYPES.GRASS, TYPES.FOREST, TYPES.POND, TYPES.PATH, TYPES.FLOWER_GARDEN, TYPES.TREASURE].includes(type);
     }
 }
 
 function run(ctx) {
     const garden = new GardenGrammar(canvas.width, canvas.height);
     garden.generate();
+    ctx.fillStyle = '#8bc34a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height); // usuwa przerwy miedzy prosotkatami
     drawGarden(ctx, garden);
 }
 
