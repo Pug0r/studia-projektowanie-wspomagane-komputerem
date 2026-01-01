@@ -1,0 +1,133 @@
+import { TYPES, COLORS } from './constants.js';
+
+
+const TextureGenerator = {
+    createPattern: (ctx, width, height, drawFn) => {
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = width;
+        tCanvas.height = height;
+        const tCtx = tCanvas.getContext('2d');
+        drawFn(tCtx, width, height);
+        return ctx.createPattern(tCanvas, 'repeat');
+    },
+
+    getGrass: (ctx) => TextureGenerator.createPattern(ctx, 30, 30, (c, w, h) => {
+        c.fillStyle = '#8bc34a'; 
+        c.fillRect(0, 0, w, h);
+        c.fillStyle = '#689f38'; 
+        c.beginPath(); c.arc(Math.random()*w, Math.random()*h, 2, 0, Math.PI*2); c.fill();
+        c.beginPath(); c.arc(Math.random()*w, Math.random()*h, 1.5, 0, Math.PI*2); c.fill();
+    }),
+
+    getWater: (ctx) => TextureGenerator.createPattern(ctx, 40, 40, (c, w, h) => {
+        c.fillStyle = '#4fc3f7'; 
+        c.fillRect(0, 0, w, h);
+        c.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(0, 20); c.bezierCurveTo(10, 10, 30, 30, 40, 20);
+        c.stroke();
+    }),
+
+    getStone: (ctx) => TextureGenerator.createPattern(ctx, 20, 20, (c, w, h) => {
+        c.fillStyle = '#cfd8dc'; 
+        c.fillRect(0, 0, w, h);
+        c.strokeStyle = '#b0bec5';
+        c.strokeRect(0, 0, w, h);
+        c.fillStyle = '#90a4ae';
+        c.fillRect(Math.random()*20, Math.random()*20, 2, 2);
+    })
+};
+
+
+export function drawGarden(ctx, grammar) {
+    const grassPattern = TextureGenerator.getGrass(ctx);
+    const waterPattern = TextureGenerator.getWater(ctx);
+    const stonePattern = TextureGenerator.getStone(ctx);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    
+    const terminals = grammar.nodes.filter(n => grammar.isTerminal(n.type));
+
+    terminals.sort((a, b) => (b.w * b.h) - (a.w * a.h));
+    
+    terminals.forEach(node => {
+        ctx.save();
+        ctx.translate(node.x, node.y);
+
+        switch (node.type) {
+            case TYPES.GRASS:
+            case TYPES.FOREST:
+            case TYPES.FLOWER_GARDEN:
+                ctx.fillStyle = grassPattern;
+                ctx.fillRect(0, 0, node.w, node.h);
+                break;
+            
+            case TYPES.PATH:
+                ctx.fillStyle = stonePattern;
+                ctx.fillRect(0, 0, node.w, node.h);
+                ctx.strokeStyle = '#90a4ae';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(0, 0, node.w, node.h);
+                break;
+
+            case TYPES.POND:
+                ctx.fillStyle = waterPattern;
+                ctx.fillRect(0, 0, node.w, node.h);
+                ctx.strokeStyle = '#81d4fa';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(0, 0, node.w, node.h);
+                break;
+        }
+        ctx.restore();
+    });
+
+    terminals.forEach(node => {
+        ctx.save();
+        ctx.translate(node.x, node.y);
+        drawDetails(ctx, node);
+        ctx.restore();
+    });
+}
+
+function drawDetails(ctx, node) {
+    const area = node.w * node.h;
+    if (area <= 0) return;
+
+    if (node.type === TYPES.FOREST) {
+        const treeCount = Math.floor(area / 1800); 
+        for(let i=0; i<treeCount; i++) {
+            const x = Math.random() * node.w;
+            const y = Math.random() * node.h;
+            const r = 10 + Math.random() * 12;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; 
+            ctx.beginPath(); ctx.arc(x+4, y+4, r, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = '#2e7d32'; 
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#4caf50'; 
+            ctx.beginPath(); ctx.arc(x-3, y-3, r*0.4, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    if (node.type === TYPES.FLOWER_GARDEN) {
+        const flowerCount = Math.floor(area / 300);
+        const colors = ['#e91e63', '#ffeb3b', '#ff5722', '#9c27b0'];
+        for(let i=0; i<flowerCount; i++) {
+            const x = Math.random() * node.w;
+            const y = Math.random() * node.h;
+            
+            ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            ctx.beginPath(); 
+            ctx.arc(x, y, 3 + Math.random()*2, 0, Math.PI*2); 
+            ctx.fill();
+            
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2); ctx.fill();
+        }
+    }
+}

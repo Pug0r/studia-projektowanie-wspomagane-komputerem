@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Generator Ogrodów - Gramatyka Grafowa</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button.secondary {
+            background-color: #2196F3;
+        }
+
+        button.secondary:hover {
+            background-color: #0b7dda;
+        }
+
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 4px solid #fff;
+        }
+
+        canvas {
+            display: block;
+            background-color: #e8e8e8; /* Tło "puste" */
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+        
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .box { width: 15px; height: 15px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+
+    <h1>Generator Projektów Ogrodów</h1>
+    <p>Projekt nr 2: Gramatyki Grafowe i Interpretacja Geometrii</p>
+
+    <div class="controls">
+        <button onclick="generateGarden(false)">Generuj natychmiast</button>
+        <button class="secondary" onclick="generateGarden(true)">Generuj krokowo (Animacja)</button>
+        <div id="status">Gotowy</div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gardenCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="box" style="background:#5da130"></div> Trawa</div>
+        <div class="legend-item"><div class="box" style="background:#8f6f56"></div> Ścieżka</div>
+        <div class="legend-item"><div class="box" style="background:#4fa4cc"></div> Woda</div>
+        <div class="legend-item"><div class="box" style="background:#e890ad"></div> Kwiaty</div>
+        <div class="legend-item"><div class="box" style="background:#1e591e; border-radius:50%"></div> Drzewa</div>
+        <div class="legend-item"><div class="box" style="background:#607d8b"></div> Budynek/Płytki</div>
+    </div>
+
+<script>
+/**
+ * KLASA WĘZŁA GRAFU (Node)
+ * Reprezentuje komponent ogrodu.
+ * Atrybuty: 
+ * - type: Etykieta (np. 'OGROD', 'TRAWA')
+ * - x, y, w, h: Geometria (zgodnie z wymaganiami projektu)
+ * - props: Dodatkowe atrybuty (np. gatunek drzewa)
+ * - isTerminal: Czy węzeł może być dalej rozwijany
+ */
+class GraphNode {
+    constructor(type, x, y, w, h, isTerminal = false, props = {}) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.isTerminal = isTerminal;
+        this.props = props;
+        this.id = Math.random().toString(36).substr(2, 9); // Unikalne ID
+    }
+}
+
+/**
+ * SILNIK GRAMATYKI GRAFOWEJ
+ */
+const GardenGrammar = {
+    // Stan grafu - lista aktywnych węzłów (liści drzewa rozbioru)
+    nodes: [],
+    
+    // Inicjalizacja
+    init: function(width, height) {
+        this.nodes = [new GraphNode('OGROD', 0, 0, width, height, false)];
+    },
+
+    // Główna pętla przetwarzania (jeden krok)
+    // Zwraca true jeśli wykonano jakąś produkcję, false jeśli koniec
+    step: function() {
+        // Znajdź pierwszy nieterminalny węzeł
+        const index = this.nodes.findIndex(n => !n.isTerminal);
+        
+        if (index === -1) return false; // Wszystkie węzły są terminalne
+        
+        const node = this.nodes[index];
+        
+        // Wybierz produkcję pasującą do typu węzła
+        const production = this.chooseProduction(node);
+        
+        // Zastosuj produkcję - otrzymujemy nowe węzły
+        const newNodes = production(node);
+        
+        // Zastąp stary węzeł nowymi (Node Replacement)
+        this.nodes.splice(index, 1, ...newNodes);
+        
+        return true;
+    },
+
+    // Wybór produkcji (losowy lub deterministyczny)
+    chooseProduction: function(node) {
+        const rules = this.rules[node.type];
+        if (!rules) {
+            // Jeśli nie ma reguł dla danego typu, oznaczamy go jako terminalny (zabezpieczenie)
+            node.isTerminal = true;
+            return (n) => [n];
+        }
+        
+        // Losujemy regułę
+        const randomIndex = Math.floor(Math.random() * rules.length);
+        return rules[randomIndex];
+    },
+
+    // DEFINICJE PRODUKCJI (Reguły Gramatyki)
+    // Każda reguła przyjmuje węzeł rodzica i zwraca tablicę węzłów dzieci
+    rules: {
+        'OGROD': [
+            // Reguła 1: Podział pionowy na strefę rekreacji i natury
+            (n) => splitVertical(n, 0.3 + Math.random() * 0.4, 'STREFA_DOMU', 'STREFA_ZIELENI'),
+            // Reguła 2: Podział poziomy
+            (n) => splitHorizontal(n, 0.4, 'STREFA_ZIELENI', 'STREFA_DOMU')
+        ],
+        
+        'STREFA_DOMU': [
+            // Dom z tarasem
+            (n) => splitHorizontal(n, 0.6, 'BUDYNEK', 'TARAS'),
+            // Dom z podjazdem
+            (n) => splitVertical(n, 0.3, 'PARKING', 'BUDYNEK')
+        ],
+
+        'STREFA_ZIELENI': [
+            // Trawa i kwiaty
+            (n) => splitVertical(n, 0.5, 'TRAWNIK_GLOWNY', 'RABATA_KWIATOWA'),
+            // Trawa i woda
+            (n) => splitHorizontal(n, 0.7, 'TRAWNIK_GLOWNY', 'STAW'),
+            // Aleja drzew (jeśli obszar jest wystarczająco duży)
+            (n) => n.w > 100 && n.h > 100 ? splitVertical(n, 0.5, 'ALEJA', 'TRAWNIK_GLOWNY') : [new GraphNode('TRAWNIK_GLOWNY', n.x, n.y, n.w, n.h)]
+        ],
+
+        'TRAWNIK_GLOWNY': [
+            // Czysty trawnik (terminal)
+            (n) => [new GraphNode('TRAWA', n.x, n.y, n.w, n.h, true)],
+            // Trawnik z samotnym drzewem
+            (n) => {
+                // Ta produkcja nie dzieli geometrii, ale zmienia typ węzła na taki, który rysuje trawę + drzewo
+                return [new GraphNode('TRAWA_Z_DRZEWEM', n.x, n.y, n.w, n.h, true, { treeType: 'Dąb' })];
+            },
+            // Złożony trawnik - dalszy podział
+            (n) => splitHorizontal(n, 0.5, 'TRAWA', 'TRAWA')
+        ],
+
+        'RABATA_KWIATOWA': [
+            // Zamiana na siatkę kwiatów (terminal)
+            (n) => [new GraphNode('KWIATY', n.x, n.y, n.w, n.h, true, { color: 'red' })],
+            // Podział na kwiaty i ścieżkę
+            (n) => splitVertical(n, 0.2, 'SCIEZKA', 'KWIATY')
+        ],
+
+        'STAW': [
+            (n) => [new GraphNode('WODA', n.x, n.y, n.w, n.h, true)]
+        ],
+
+        'BUDYNEK': [
+            (n) => [new GraphNode('DOM', n.x, n.y, n.w, n.h, true)]
+        ],
+        
+        'PARKING': [
+            (n) => [new GraphNode('BETON', n.x, n.y, n.w, n.h, true)]
+        ],
+
+        'TARAS': [
+            (n) => [new GraphNode('DREWNO', n.x, n.y, n.w, n.h, true)]
+        ],
+
+        'ALEJA': [
+            // Aleja to ścieżka otoczona drzewami.
+            // Dla uproszczenia tutaj dzielimy na 3 pasy: drzewa - ścieżka - drzewa
+            (n) => {
+                const partW = n.w / 4;
+                return [
+                    new GraphNode('LAS', n.x, n.y, partW, n.h, true),
+                    new GraphNode('SCIEZKA', n.x + partW, n.y, partW * 2, n.h, true),
+                    new GraphNode('LAS', n.x + partW * 3, n.y, partW, n.h, true)
+                ];
+            }
+        ]
+    }
+};
+
+/**
+ * FUNKCJE POMOCNICZE DO GEOMETRII (Implementacja wymogu Split-Grammar)
+ */
+
+// Dzieli prostokąt pionowo (linii podziału idzie z góry na dół, powstaje lewy i prawy)
+function splitVertical(parent, ratio, typeLeft, typeRight) {
+    const w1 = parent.w * ratio;
+    const w2 = parent.w - w1;
+    
+    return [
+        new GraphNode(typeLeft, parent.x, parent.y, w1, parent.h),
+        new GraphNode(typeRight, parent.x + w1, parent.y, w2, parent.h)
+    ];
+}
+
+// Dzieli prostokąt poziomo (linia podziału idzie od lewej do prawej, powstaje góra i dół)
+function splitHorizontal(parent, ratio, typeTop, typeBottom) {
+    const h1 = parent.h * ratio;
+    const h2 = parent.h - h1;
+
+    return [
+        new GraphNode(typeTop, parent.x, parent.y, parent.w, h1),
+        new GraphNode(typeBottom, parent.x, parent.y + h1, parent.w, h2)
+    ];
+}
+
+/**
+ * RENDERER - INTERPRETACJA MODELU GRAFOWEGO
+ * Zamienia węzły (dane) na reprezentację wizualną (Canvas)
+ */
+const Renderer = {
+    canvas: document.getElementById('gardenCanvas'),
+    ctx: document.getElementById('gardenCanvas').getContext('2d'),
+
+    clear: function() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    },
+
+    drawModel: function(nodes) {
+        this.clear();
+        // Rysujemy każdy węzeł
+        nodes.forEach(node => {
+            this.drawNode(node);
+        });
+    },
+
+    drawNode: function(node) {
+        const ctx = this.ctx;
+        const {x, y, w, h} = node;
+        
+        // Zapamiętanie stanu kontekstu
+        ctx.save();
+        
+        // Prosta interpretacja typów węzłów na kolory i wzory
+        switch(true) {
+            // NIETERMINALE (Dla wizualizacji etapów pośrednich)
+            case node.type === 'OGROD':
+            case node.type.startsWith('STREFA'):
+                ctx.fillStyle = '#e0e0e0';
+                ctx.strokeStyle = '#999';
+                ctx.setLineDash([5, 5]);
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+                // Rysuj etykietę dla debuggowania procesu
+                ctx.fillStyle = '#000';
+                ctx.font = '10px Arial';
+                ctx.fillText(node.type, x + 5, y + 15);
+                break;
+
+            // TERMINALE
+            case node.type === 'TRAWA':
+            case node.type === 'TRAWNIK_GLOWNY': // Czasem renderujemy nieterminal jako trawę
+                ctx.fillStyle = '#5da130'; // Trawa
+                ctx.fillRect(x, y, w, h);
+                // Tekstura trawy (losowe kropki)
+                drawNoise(ctx, x, y, w, h, '#6ab53b', 0.1);
+                break;
+
+            case node.type === 'TRAWA_Z_DRZEWEM':
+                ctx.fillStyle = '#5da130';
+                ctx.fillRect(x, y, w, h);
+                drawTree(ctx, x + w/2, y + h/2, Math.min(w, h) * 0.4);
+                break;
+            
+            case node.type === 'LAS':
+                ctx.fillStyle = '#5da130';
+                ctx.fillRect(x, y, w, h);
+                // Kilka drzew
+                const count = Math.max(1, Math.floor((w*h)/2000));
+                for(let i=0; i<count; i++) {
+                    drawTree(ctx, x + Math.random()*w, y + Math.random()*h, 15);
+                }
+                break;
+
+            case node.type === 'WODA':
+                ctx.fillStyle = '#4fa4cc';
+                ctx.fillRect(x, y, w, h);
+                // Fale
+                ctx.strokeStyle = '#7bc4e6';
+                ctx.beginPath();
+                ctx.moveTo(x + 5, y + h/2);
+                ctx.lineTo(x + w - 5, y + h/2);
+                ctx.stroke();
+                break;
+
+            case node.type === 'SCIEZKA':
+                ctx.fillStyle = '#8f6f56'; // Ziemia/Żwir
+                ctx.fillRect(x, y, w, h);
+                drawNoise(ctx, x, y, w, h, '#7a5e47', 0.2);
+                break;
+
+            case node.type === 'KWIATY':
+                ctx.fillStyle = '#5da130'; // Tło trawy
+                ctx.fillRect(x, y, w, h);
+                // Kwiatki
+                for(let i=0; i< w*h/500; i++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? '#e890ad' : '#ffeb3b';
+                    ctx.beginPath();
+                    ctx.arc(x + Math.random()*w, y + Math.random()*h, 3, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                break;
+
+            case node.type === 'DOM':
+                ctx.fillStyle = '#607d8b'; // Dach
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeStyle = '#37474f';
+                ctx.strokeRect(x+2, y+2, w-4, h-4);
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.fillText("DOM", x + w/2, y + h/2);
+                break;
+
+            case node.type === 'DREWNO':
+                ctx.fillStyle = '#d7ccc8';
+                ctx.fillRect(x, y, w, h);
+                // Deski
+                ctx.strokeStyle = '#a1887f';
+                ctx.setLineDash([]);
+                for(let i=0; i<w; i+=10) {
+                    ctx.beginPath(); ctx.moveTo(x+i, y); ctx.lineTo(x+i, y+h); ctx.stroke();
+                }
+                break;
+
+             case node.type === 'BETON':
+                ctx.fillStyle = '#9e9e9e';
+                ctx.fillRect(x, y, w, h);
+                break;
+
+            default:
+                // Fallback dla nieznanych
+                ctx.fillStyle = '#ccc';
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+                ctx.fillStyle = 'black';
+                ctx.fillText(node.type, x+5, y+15);
+        }
+        
+        ctx.restore();
+    }
+};
+
+/**
+ * FUNKCJE RYSOWANIA DETALI (HELPERS)
+ */
+function drawTree(ctx, cx, cy, r) {
+    ctx.save();
+    // Cień
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.arc(cx + 5, cy + 5, r, 0, Math.PI*2);
+    ctx.fill();
+    // Korona
+    ctx.fillStyle = '#1e591e'; // Ciemna zieleń
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.fill();
+    // Środek
+    ctx.fillStyle = '#2e7d32'; // Jaśniejsza zieleń
+    ctx.beginPath();
+    ctx.arc(cx - r/3, cy - r/3, r/2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawNoise(ctx, x, y, w, h, color, density) {
+    ctx.fillStyle = color;
+    for (let i = 0; i < w * h * density * 0.01; i++) {
+        const rx = Math.random() * w;
+        const ry = Math.random() * h;
+        ctx.fillRect(x + rx, y + ry, 2, 2);
+    }
+}
+
+/**
+ * LOGIKA APLIKACJI
+ */
+async function generateGarden(animated) {
+    const canvas = document.getElementById('gardenCanvas');
+    const statusDiv = document.getElementById('status');
+    
+    // 1. Inicjalizacja gramatyki (Początkowy węzeł "OGROD")
+    GardenGrammar.init(canvas.width, canvas.height);
+    
+    if (!animated) {
+        // Tryb natychmiastowy: pętla while aż do wyczerpania nieterminali
+        let working = true;
+        let safetyCounter = 0;
+        while(working && safetyCounter < 1000) {
+            working = GardenGrammar.step();
+            safetyCounter++;
+        }
+        Renderer.drawModel(GardenGrammar.nodes);
+        statusDiv.innerText = "Wygenerowano!";
+    } else {
+        // Tryb animowany: setTimeout/requestAnimationFrame
+        statusDiv.innerText = "Generowanie...";
+        
+        function animateStep() {
+            Renderer.drawModel(GardenGrammar.nodes);
+            const continued = GardenGrammar.step();
+            
+            if (continued) {
+                setTimeout(animateStep, 400); // 400ms opóźnienia między krokami
+            } else {
+                Renderer.drawModel(GardenGrammar.nodes); // Finalne odświeżenie
+                statusDiv.innerText = "Zakończono!";
+            }
+        }
+        animateStep();
+    }
+}
+
+// Pierwsze uruchomienie przy starcie
+generateGarden(false);
+
+</script>
+
+</body>
+</html>
